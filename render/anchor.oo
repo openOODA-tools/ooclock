@@ -1,0 +1,12 @@
+// # Render Subsystem Anchor
+//
+// Logline: Re-exports theme resolution and digital matrix TUI layout compositor.
+//
+// Setup: Pure shim re-exporting render domain pages.
+//
+// Beats:
+//   1. Re-export circadian palette resolution.
+//   2. Re-export TUI matrix frame and mascot layout renderer.
+
+import "render_theme.oo";
+import "display.oo";

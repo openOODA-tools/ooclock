@@ -1,0 +1,46 @@
+// # Pomodoro Timer State - Productivity Cycle Engine
+//
+// Logline: Computes Pomodoro work and break countdowns with graphical progress bars.
+//
+// Setup: Pure progress calculation and bar formatting. Zero ambient authority.
+//
+// Beats:
+//   1. Define PomodoroState holding phase, duration, and completion percentage.
+//   2. Calculate remaining time and percentage completion.
+//   3. Render ASCII progress bar with filled and empty block characters.
+
+pub type PomodoroState = struct {
+    is_work: Bool,
+    total_seconds: Int,
+    remaining_seconds: Int,
+    percent: Int
+};
+
+pub fn make_pomodoro_state(work_mins: Int, elapsed_secs: Int) -> PomodoroState {
+    let total_secs: Int = work_mins * 60;
+    let rem: Int = if elapsed_secs >= total_secs { 0 } else { total_secs - elapsed_secs };
+    let pct: Int = if total_secs > 0 { (elapsed_secs * 100) / total_secs } else { 100 };
+    let capped_pct: Int = if pct > 100 { 100 } else { pct };
+    return PomodoroState {
+        is_work: true,
+        total_seconds: total_secs,
+        remaining_seconds: rem,
+        percent: capped_pct
+    };
+}
+
+pub fn format_progress_bar(percent: Int, bar_width: Int) -> String {
+    let filled_count: Int = (percent * bar_width) / 100;
+    let mut bar: String = "[";
+    let mut i: Int = 0;
+    while i < bar_width {
+        if i < filled_count {
+            bar = bar + "█";
+        } else {
+            bar = bar + "░";
+        }
+        i = i + 1;
+    }
+    bar = bar + "] " + to_string(percent) + "%";
+    return bar;
+}

@@ -1,0 +1,12 @@
+// # Mode Subsystem Anchor
+//
+// Logline: Re-exports time math breakdowns and Pomodoro productivity state machine.
+//
+// Setup: Pure shim re-exporting mode domain pages.
+//
+// Beats:
+//   1. Re-export time decomposition and stopwatch formatting.
+//   2. Re-export Pomodoro cycle calculations and progress bars.
+
+import "time_math.oo";
+import "pomodoro.oo";

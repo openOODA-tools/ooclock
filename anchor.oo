@@ -1,0 +1,16 @@
+// # ooclock Root Anchor
+//
+// Logline: Top-level re-export anchor connecting clock, mode, render, and ipc subsystems.
+//
+// Setup: Pure root shim uniting all modular subsystems for binary and test compilation.
+//
+// Beats:
+//   1. Re-export clock digit and mascot anchor.
+//   2. Re-export mode and time arithmetic anchor.
+//   3. Re-export render compositor anchor.
+//   4. Re-export ipc communication anchor.
+
+import "clock/anchor.oo";
+import "mode/anchor.oo";
+import "render/anchor.oo";
+import "ipc/anchor.oo";

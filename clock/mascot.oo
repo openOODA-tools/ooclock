@@ -1,0 +1,50 @@
+// # Dynamic Mascot Moods - Circadian Emotes and Messages
+//
+// Logline: Adjusts mascot emote, message, and circadian lighting color based on the hour.
+//
+// Setup: Pure value type and circadian state evaluator. Zero ambient authority.
+//
+// Beats:
+//   1. Evaluate hour of the day into dawn, daylight, twilight, or night circadian phases.
+//   2. Generate expressive ASCII mascot art appropriate to active phase.
+//   3. Provide thematic circadian ANSI color codes.
+
+pub type MascotMood = struct {
+    phase: String,
+    emote: String,
+    quote: String,
+    circadian_color: String
+};
+
+pub fn evaluate_circadian_mood(hour: Int) -> MascotMood {
+    if hour >= 5 && hour < 12 {
+        return MascotMood {
+            phase: "Dawn / Morning",
+            emote: "( ＾◡＾)っ♨",
+            quote: "Rise and shine! A fresh sovereign day begins.",
+            circadian_color: "33"
+        };
+    }
+    if hour >= 12 && hour < 18 {
+        return MascotMood {
+            phase: "Daylight / Afternoon",
+            emote: "(⌐■_■)⚡",
+            quote: "Peak focus mode! Deep work and builder energy.",
+            circadian_color: "36"
+        };
+    }
+    if hour >= 18 && hour < 22 {
+        return MascotMood {
+            phase: "Twilight / Evening",
+            emote: "(✿◠‿◠)✨",
+            quote: "Winding down. Great accomplishments today.",
+            circadian_color: "35"
+        };
+    }
+    return MascotMood {
+        phase: "Starlight / Night",
+        emote: "( ᴗ_ ᴗ。) zZ",
+        quote: "Late night hacking session. Rest well soon.",
+        circadian_color: "34"
+    };
+}

@@ -1,0 +1,12 @@
+// # Clock Subsystem Anchor
+//
+// Logline: Re-exports digital matrix digits and circadian mascot mood engine.
+//
+// Setup: Pure shim re-exporting clock domain pages.
+//
+// Beats:
+//   1. Re-export block matrix digit glyphs.
+//   2. Re-export circadian mascot emotes and quotes.
+
+import "digits.oo";
+import "mascot.oo";

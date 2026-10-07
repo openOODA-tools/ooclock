@@ -1,0 +1,82 @@
+// # ooclock Entry Point - Sovereign Digital Matrix Clock and Timer
+//
+// Logline: Argument gate, circadian clock renderer, stopwatch, and Pomodoro timer.
+//
+// Setup: Bound to FsReadCap, TimeCap, and EnvCap. Zero ambient authority.
+//
+// Beats:
+//   1. Handle --help, --version, and --mcp early without side effects.
+//   2. Compute circadian time components and dynamic mascot moods.
+//   3. Render styled digital matrix clock, Pomodoro bars, or stopwatch readouts.
+
+import "std/fs/time/chrono.oo";
+import "clock/anchor.oo";
+import "mode/anchor.oo";
+import "render/anchor.oo";
+import "ipc/anchor.oo";
+
+fn print_help() {
+    println("Usage: ooclock [OPTIONS]\n\n" +
+        "Sovereign TUI matrix clock, stopwatch, and pomodoro timer.\n\n" +
+        "Options:\n" +
+        "  -1, --once             Print single clock snapshot and exit\n" +
+        "  -s, --stopwatch        Display stopwatch timer\n" +
+        "  -p, --pomodoro [MINS]  Start Pomodoro focus session (default 25 mins)\n" +
+        "      --tz=OFFSET        Timezone offset in hours from UTC (e.g. -10, +5)\n" +
+        "      --theme=NAME       Override active palette (1982, dracula, etc.)\n" +
+        "      --mcp              Start Model Context Protocol stdio server\n" +
+        "  -h, --help             Display this help message and exit\n" +
+        "  -v, --version          Print version information and exit\n");
+}
+
+pub fn main(fs: &FsReadCap, time: &TimeCap, env: &EnvCap, args: List[String]) -> Result[Int, String] {
+    let opts: ClockOpts = parse_clock_args(args);
+
+    if opts.help_mode {
+        print_help();
+        return Ok(0);
+    }
+    if opts.version_mode {
+        println("ooclock 0.1.0 (openOODA sovereign matrix clock)");
+        return Ok(0);
+    }
+    if opts.mcp_mode {
+        run_mcp_server(fs, time);
+        return Ok(0);
+    }
+
+    let theme: String = if opts.theme_override != "" { opts.theme_override } else { resolve_clock_theme(fs, env) };
+    let now_ms: Int = chrono_now_ms(time);
+
+    if opts.stopwatch_mode {
+        let sw_str: String = format_stopwatch_string(0);
+        let mood: MascotMood = MascotMood {
+            phase: "Stopwatch",
+            emote: "(⏱️ )⚡",
+            quote: "Stopwatch initialized at zero.",
+            circadian_color: "32"
+        };
+        draw_clock_box(sw_str, mood, theme, "Mode: Precise Chrono Stopwatch");
+        return Ok(0);
+    }
+
+    if opts.pomodoro_mode {
+        let state: PomodoroState = make_pomodoro_state(opts.pomodoro_mins, 0);
+        let pbar: String = format_progress_bar(state.percent, 24);
+        let mood: MascotMood = MascotMood {
+            phase: "Pomodoro Focus",
+            emote: "(ง •̀_•́)ง",
+            quote: "Focus interval: " + to_string(opts.pomodoro_mins) + " minutes. Let's build.",
+            circadian_color: "31"
+        };
+        draw_clock_box(to_string(opts.pomodoro_mins) + ":00", mood, theme, "Progress: " + pbar);
+        return Ok(0);
+    }
+
+    let tc: TimeComponents = epoch_to_components(now_ms, opts.tz_offset_hours);
+    let time_str: String = format_clock_string(tc);
+    let mood: MascotMood = evaluate_circadian_mood(tc.hours);
+
+    draw_clock_box(time_str, mood, theme, "");
+    return Ok(0);
+}

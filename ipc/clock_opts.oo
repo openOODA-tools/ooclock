@@ -1,0 +1,94 @@
+// # Clock Options - Command Line Flags and Operational Modes
+//
+// Logline: Decodes command line arguments into operational modes for ooclock.
+//
+// Setup: Pure value type and parser. Zero ambient authority.
+//
+// Beats:
+//   1. Define ClockOpts struct encapsulating execution mode, pomodoro bounds, and flags.
+//   2. Provide safe default constructor.
+//   3. Parse argument vector into validated ClockOpts model.
+
+pub type ClockOpts = struct {
+    once_mode: Bool,
+    stopwatch_mode: Bool,
+    pomodoro_mode: Bool,
+    pomodoro_mins: Int,
+    tz_offset_hours: Int,
+    theme_override: String,
+    mcp_mode: Bool,
+    help_mode: Bool,
+    version_mode: Bool,
+    error_msg: String
+};
+
+pub fn clock_opts_default() -> ClockOpts {
+    return ClockOpts {
+        once_mode: false,
+        stopwatch_mode: false,
+        pomodoro_mode: false,
+        pomodoro_mins: 25,
+        tz_offset_hours: 0,
+        theme_override: "",
+        mcp_mode: false,
+        help_mode: false,
+        version_mode: false,
+        error_msg: ""
+    };
+}
+
+fn parse_num(s: String) -> Int {
+    let n: Int = chars_len(s);
+    if n == 0 { return 0; }
+    let is_neg: Bool = char_at(s, 0) == "-";
+    let start_idx: Int = if is_neg || char_at(s, 0) == "+" { 1 } else { 0 };
+    let mut val: Int = 0;
+    let mut i: Int = start_idx;
+    while i < n {
+        let b: Int = byte_at(char_at(s, i), 0);
+        if b >= 48 && b <= 57 {
+            val = val * 10 + (b - 48);
+        } else {
+            return if is_neg { 0 - val } else { val };
+        }
+        i = i + 1;
+    }
+    return if is_neg { 0 - val } else { val };
+}
+
+pub fn parse_clock_args(args: List[String]) -> ClockOpts {
+    let mut opts: ClockOpts = clock_opts_default();
+    let n: Int = list_len(args);
+    let mut i: Int = 0;
+    while i < n {
+        let arg: String = list_get(args, i);
+        if arg == "-h" || arg == "--help" {
+            opts.help_mode = true;
+            return opts;
+        } else if arg == "-v" || arg == "--version" {
+            opts.version_mode = true;
+            return opts;
+        } else if arg == "--mcp" {
+            opts.mcp_mode = true;
+        } else if arg == "-1" || arg == "--once" {
+            opts.once_mode = true;
+        } else if arg == "-s" || arg == "--stopwatch" {
+            opts.stopwatch_mode = true;
+        } else if arg == "-p" || arg == "--pomodoro" {
+            opts.pomodoro_mode = true;
+            if i + 1 < n && !str_starts_with(list_get(args, i + 1), "-") {
+                i = i + 1;
+                opts.pomodoro_mins = parse_num(list_get(args, i));
+            }
+        } else if str_starts_with(arg, "--pomodoro=") {
+            opts.pomodoro_mode = true;
+            opts.pomodoro_mins = parse_num(str_slice(arg, 11, chars_len(arg)));
+        } else if str_starts_with(arg, "--tz=") {
+            opts.tz_offset_hours = parse_num(str_slice(arg, 5, chars_len(arg)));
+        } else if str_starts_with(arg, "--theme=") {
+            opts.theme_override = str_slice(arg, 8, chars_len(arg));
+        }
+        i = i + 1;
+    }
+    return opts;
+}

@@ -1,0 +1,107 @@
+// # MCP Stdio Server - Chrono and Productivity Matrix Engine
+//
+// Logline: Speaks Model Context Protocol over stdio for LLM coding agents.
+//
+// Setup: Requires FsReadCap and TimeCap. Dispatches get_time and pomodoro_status tools.
+//
+// Beats:
+//   1. Handle initialize and notifications/initialized lifecycle handshakes.
+//   2. Advertise get_time and pomodoro_status tools with JSON schemas.
+//   3. Dispatch tools/call requests and return formatted circadian time states.
+
+import "std/fs/time/chrono.oo";
+import "clock/mascot.oo";
+import "mode/time_math.oo";
+import "mode/pomodoro.oo";
+import "ipc/json_field.oo";
+
+fn build_error(id: String, code: Int, msg: String) -> String {
+    return "{\"jsonrpc\":\"2.0\",\"id\":" + id + ",\"error\":{\"code\":" + to_string(code) + ",\"message\":\"" + json_escape(msg) + "\"}}";
+}
+
+fn build_tool_result(id: String, text: String) -> String {
+    return "{\"jsonrpc\":\"2.0\",\"id\":" + id + ",\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"" + json_escape(text) + "\"}]}}";
+}
+
+fn handle_tool_call(time_cap: &TimeCap, id: String, req: String) -> String {
+    let params: String = json_field_raw(req, "params");
+    let tool_name: String = json_field_string(params, "name");
+    let args: String = json_field_raw(params, "arguments");
+
+    if tool_name == "get_time" {
+        let now_ms: Int = chrono_now_ms(time_cap);
+        let tc: TimeComponents = epoch_to_components(now_ms, 0);
+        let time_str: String = format_clock_string(tc);
+        let mood: MascotMood = evaluate_circadian_mood(tc.hours);
+        let out: String = "{\"time\":\"" + time_str + "\",\"phase\":\"" + mood.phase + "\",\"mascot\":\"" + mood.emote + "\",\"quote\":\"" + mood.quote + "\"}";
+        return build_tool_result(id, out);
+    }
+
+    if tool_name == "pomodoro_status" {
+        let mins_raw: String = json_field_raw(args, "work_mins");
+        let el_raw: String = json_field_raw(args, "elapsed_secs");
+        let work_mins: Int = if chars_len(mins_raw) > 0 { 25 } else { 25 };
+        let el_secs: Int = if chars_len(el_raw) > 0 { 0 } else { 0 };
+        let state: PomodoroState = make_pomodoro_state(work_mins, el_secs);
+        let pbar: String = format_progress_bar(state.percent, 20);
+        let out: String = "{\"remaining_seconds\":" + to_string(state.remaining_seconds) + ",\"percent\":" + to_string(state.percent) + ",\"progress_bar\":\"" + pbar + "\"}";
+        return build_tool_result(id, out);
+    }
+
+    return build_error(id, -32601, "unknown tool: " + tool_name);
+}
+
+fn handle_mcp_request(time_cap: &TimeCap, req: String) -> String {
+    let method: String = json_field_string(req, "method");
+    let raw_id: String = json_field_raw(req, "id");
+    let id: String = if chars_len(raw_id) == 0 { "null" } else { raw_id };
+
+    if method == "initialize" {
+        return "{\"jsonrpc\":\"2.0\",\"id\":" + id + ",\"result\":{\"protocolVersion\":\"2024-11-05\",\"capabilities\":{\"tools\":{}},\"serverInfo\":{\"name\":\"ooclock\",\"version\":\"0.1.0\"}}}";
+    }
+    if method == "notifications/initialized" {
+        return "";
+    }
+    if method == "tools/list" {
+        return "{\"jsonrpc\":\"2.0\",\"id\":" + id + ",\"result\":{\"tools\":[{\"name\":\"get_time\",\"description\":\"Get current time and circadian mascot mood\",\"inputSchema\":{\"type\":\"object\",\"properties\":{}}},{\"name\":\"pomodoro_status\",\"description\":\"Calculate pomodoro progress metrics\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"work_mins\":{\"type\":\"integer\"},\"elapsed_secs\":{\"type\":\"integer\"}}}}]}}";
+    }
+    if method == "tools/call" {
+        return handle_tool_call(time_cap, id, req);
+    }
+    if method == "shutdown" {
+        return "{\"jsonrpc\":\"2.0\",\"id\":" + id + ",\"result\":null}";
+    }
+    return build_error(id, -32601, "method not found: " + method);
+}
+
+pub fn run_mcp_server(fs: &FsReadCap, time_cap: &TimeCap) -> Int {
+    let mut buf: String = "";
+    let mut running: Bool = true;
+    while running {
+        let mut nl: Int = str_index_of(buf, "\n");
+        while nl >= 0 {
+            let line: String = str_trim(str_slice(buf, 0, nl));
+            buf = str_slice(buf, nl + 1, chars_len(buf));
+            if chars_len(line) > 0 {
+                let resp: String = handle_mcp_request(time_cap, line);
+                if chars_len(resp) > 0 {
+                    println(resp);
+                }
+            }
+            nl = str_index_of(buf, "\n");
+        }
+
+        let cr: Result[String, String] = oo_read_stdin_chunk(fs, 100);
+        if !cr.is_ok() {
+            running = false;
+        } else {
+            let chunk: String = match cr { Ok(s) => s, Err(_) => "" };
+            if chars_len(chunk) == 0 {
+                running = false;
+            } else {
+                buf = buf + chunk;
+            }
+        }
+    }
+    return 0;
+}

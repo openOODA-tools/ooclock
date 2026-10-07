@@ -1,0 +1,45 @@
+// # Display Compositor - TUI Frame and Matrix Layout
+//
+// Logline: Composes big digit matrix displays, circadian mascot emotes, and borders.
+//
+// Setup: Pure TUI layout compositor. Zero ambient authority.
+//
+// Beats:
+//   1. Draw decorative bordered containers with title headers.
+//   2. Format 5-row digital matrix clock numerals with circadian palette accents.
+//   3. Render circadian mascot emote banner and motivational status line.
+
+import "clock/digits.oo";
+import "clock/mascot.oo";
+import "render_theme.oo";
+
+pub fn draw_clock_box(
+    time_str: String,
+    mood: MascotMood,
+    theme: String,
+    extra_line: String
+) {
+    let esc: String = ansi_esc();
+    let reset: String = term_reset();
+    let color_code: String = mood.circadian_color;
+    let accent: String = esc + "[1;" + color_code + "m";
+    let dimmed: String = esc + "[38;5;240m";
+
+    println(dimmed + "┌─[ " + accent + "ooclock" + dimmed + " ─ " + mood.phase + " ]────────────────────────┐" + reset);
+
+    let mut row: Int = 0;
+    while row < 5 {
+        let row_text: String = render_time_matrix_row(time_str, row);
+        println(dimmed + "│  " + accent + row_text + dimmed + "  │" + reset);
+        row = row + 1;
+    }
+
+    println(dimmed + "├───────────────────────────────────────────────────────┤" + reset);
+    println(dimmed + "│  " + esc + "[1;37m" + mood.emote + reset + "  " + esc + "[38;5;244m" + mood.quote + dimmed + "  │" + reset);
+
+    if chars_len(extra_line) > 0 {
+        println(dimmed + "│  " + extra_line + dimmed + "  │" + reset);
+    }
+
+    println(dimmed + "└───────────────────────────────────────────────────────┘" + reset);
+}
