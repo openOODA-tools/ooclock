@@ -1,4 +1,4 @@
-# ooclock v0.1.0 Makefile
+# ooclock v0.2.0 Makefile
 
 OODA_COMPILER ?= $(firstword $(wildcard $(HOME)/.openooda/bin/oodac $(CURDIR)/../../openOODA/oodac/bin/oodac))
 OODACODEX ?= $(HOME)/.openooda/northstar.oot
@@ -9,7 +9,7 @@ PREFIX ?= /usr/local
 BINDIR ?= $(PREFIX)/bin
 
 SRC := $(wildcard *.oo) $(wildcard */*.oo)
-VERSION ?= 0.1.0
+VERSION ?= $(shell cat VERSION 2>/dev/null || echo 0.2.0)
 
 .PHONY: build check line-cap file-law academy density verify clean test package package-deb package-rpm package-arch install uninstall
 
@@ -103,7 +103,7 @@ test: $(BIN)
 	@echo "=== testing --help ==="
 	@./$(BIN) --help > /dev/null && echo "PASS: --help"
 	@echo "=== testing --version ==="
-	@./$(BIN) --version | grep -q "0.1.0" && echo "PASS: --version"
+	@./$(BIN) --version | grep -q "0.2.0" && echo "PASS: --version"
 	@echo "=== testing single snapshot clock ==="
 	@./$(BIN) -1 | grep -q "ooclock" && echo "PASS: single snapshot clock"
 	@echo "=== testing pomodoro mode ==="
@@ -113,9 +113,15 @@ test: $(BIN)
 	@echo "=== testing MCP initialize ==="
 	@printf '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}\n' | ./$(BIN) --mcp | grep -q "protocolVersion" && echo "PASS: MCP initialize"
 	@echo "=== testing MCP tools/list ==="
-	@printf '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}\n' | ./$(BIN) --mcp | grep -q "get_time" && echo "PASS: MCP tools/list"
+	@printf '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}\n' | ./$(BIN) --mcp | grep -q "clock_now" && echo "PASS: MCP tools/list"
+	@echo "=== testing MCP tools/call clock_now ==="
+	@printf '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"clock_now","arguments":{"tz_offset_hours":-5}}}\n' | ./$(BIN) --mcp | grep -q "time" && echo "PASS: MCP clock_now"
 	@echo "=== testing MCP tools/call get_time ==="
-	@printf '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"get_time","arguments":{}}}\n' | ./$(BIN) --mcp | grep -q "time" && echo "PASS: MCP get_time"
+	@printf '{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"get_time","arguments":{}}}\n' | ./$(BIN) --mcp | grep -q "time" && echo "PASS: MCP get_time"
+	@echo "=== testing MCP tools/call pomodoro_status ==="
+	@printf '{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"pomodoro_status","arguments":{"work_mins":50,"elapsed_secs":1500}}}\n' | ./$(BIN) --mcp | grep -q "50%" && echo "PASS: MCP pomodoro_status"
+	@echo "=== testing determinism ==="
+	@./$(BIN) --version > /tmp/ooclock_v1 && ./$(BIN) --version > /tmp/ooclock_v2 && diff -u /tmp/ooclock_v1 /tmp/ooclock_v2 && rm -f /tmp/ooclock_v1 /tmp/ooclock_v2 && echo "PASS: determinism"
 	@echo "ALL TESTS PASSED"
 
 install: $(BIN)

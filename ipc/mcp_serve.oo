@@ -28,23 +28,25 @@ fn handle_tool_call(time_cap: &TimeCap, id: String, req: String) -> String {
     let tool_name: String = json_field_string(params, "name");
     let args: String = json_field_raw(params, "arguments");
 
-    if tool_name == "get_time" {
+    if tool_name == "clock_now" || tool_name == "get_time" {
+        let tz_raw: String = json_field_raw(args, "tz_offset_hours");
+        let tz_offset: Int = if chars_len(tz_raw) > 0 { parse_int_safe(tz_raw, 0) } else { 0 };
         let now_ms: Int = chrono_now_ms(time_cap);
-        let tc: TimeComponents = epoch_to_components(now_ms, 0);
+        let tc: TimeComponents = epoch_to_components(now_ms, tz_offset);
         let time_str: String = format_clock_string(tc);
         let mood: MascotMood = evaluate_circadian_mood(tc.hours);
-        let out: String = "{\"time\":\"" + time_str + "\",\"phase\":\"" + mood.phase + "\",\"mascot\":\"" + mood.emote + "\",\"quote\":\"" + mood.quote + "\"}";
+        let out: String = "{\"time\":\"" + time_str + "\",\"phase\":\"" + mood.phase + "\",\"mascot\":\"" + mood.emote + "\",\"quote\":\"" + mood.quote + "\",\"tz_offset_hours\":" + to_string(tz_offset) + "}";
         return build_tool_result(id, out);
     }
 
     if tool_name == "pomodoro_status" {
         let mins_raw: String = json_field_raw(args, "work_mins");
         let el_raw: String = json_field_raw(args, "elapsed_secs");
-        let work_mins: Int = if chars_len(mins_raw) > 0 { 25 } else { 25 };
-        let el_secs: Int = if chars_len(el_raw) > 0 { 0 } else { 0 };
+        let work_mins: Int = if chars_len(mins_raw) > 0 { parse_int_safe(mins_raw, 25) } else { 25 };
+        let el_secs: Int = if chars_len(el_raw) > 0 { parse_int_safe(el_raw, 0) } else { 0 };
         let state: PomodoroState = make_pomodoro_state(work_mins, el_secs);
         let pbar: String = format_progress_bar(state.percent, 20);
-        let out: String = "{\"remaining_seconds\":" + to_string(state.remaining_seconds) + ",\"percent\":" + to_string(state.percent) + ",\"progress_bar\":\"" + pbar + "\"}";
+        let out: String = "{\"work_mins\":" + to_string(work_mins) + ",\"elapsed_secs\":" + to_string(el_secs) + ",\"remaining_seconds\":" + to_string(state.remaining_seconds) + ",\"percent\":" + to_string(state.percent) + ",\"progress_bar\":\"" + pbar + "\"}";
         return build_tool_result(id, out);
     }
 
@@ -57,13 +59,13 @@ fn handle_mcp_request(time_cap: &TimeCap, req: String) -> String {
     let id: String = if chars_len(raw_id) == 0 { "null" } else { raw_id };
 
     if method == "initialize" {
-        return "{\"jsonrpc\":\"2.0\",\"id\":" + id + ",\"result\":{\"protocolVersion\":\"2024-11-05\",\"capabilities\":{\"tools\":{}},\"serverInfo\":{\"name\":\"ooclock\",\"version\":\"0.1.0\"}}}";
+        return "{\"jsonrpc\":\"2.0\",\"id\":" + id + ",\"result\":{\"protocolVersion\":\"2024-11-05\",\"capabilities\":{\"tools\":{}},\"serverInfo\":{\"name\":\"ooclock\",\"version\":\"0.2.0\"}}}";
     }
     if method == "notifications/initialized" {
         return "";
     }
     if method == "tools/list" {
-        return "{\"jsonrpc\":\"2.0\",\"id\":" + id + ",\"result\":{\"tools\":[{\"name\":\"get_time\",\"description\":\"Get current time and circadian mascot mood\",\"inputSchema\":{\"type\":\"object\",\"properties\":{}}},{\"name\":\"pomodoro_status\",\"description\":\"Calculate pomodoro progress metrics\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"work_mins\":{\"type\":\"integer\"},\"elapsed_secs\":{\"type\":\"integer\"}}}}]}}";
+        return "{\"jsonrpc\":\"2.0\",\"id\":" + id + ",\"result\":{\"tools\":[{\"name\":\"clock_now\",\"description\":\"Get current digital clock time, timezone offset, and circadian mascot mood\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"tz_offset_hours\":{\"type\":\"integer\"}}}},{\"name\":\"get_time\",\"description\":\"Alias for clock_now: get current time and circadian mood\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"tz_offset_hours\":{\"type\":\"integer\"}}}},{\"name\":\"pomodoro_status\",\"description\":\"Calculate pomodoro progress metrics\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"work_mins\":{\"type\":\"integer\"},\"elapsed_secs\":{\"type\":\"integer\"}}}}]}}";
     }
     if method == "tools/call" {
         return handle_tool_call(time_cap, id, req);

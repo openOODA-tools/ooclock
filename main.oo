@@ -37,7 +37,7 @@ pub fn main(fs: &FsReadCap, time: &TimeCap, env: &EnvCap, args: List[String]) ->
         return Ok(0);
     }
     if opts.version_mode {
-        println("ooclock 0.1.0 (openOODA sovereign matrix clock)");
+        println("ooclock 0.2.0 (openOODA sovereign matrix clock)");
         return Ok(0);
     }
     if opts.mcp_mode {

@@ -24,7 +24,7 @@ curl -fsSL https://openooda-tools.github.io/ooclock/install.sh | bash
 curl -fsSL https://openooda-tools.github.io/ooclock/install.sh | bash -s -- --apt
 
 # Or manual package install
-sudo dpkg -i ooclock_0.1.0-1_amd64.deb
+sudo dpkg -i ooclock_0.2.0-1_amd64.deb
 ```
 
 ### Fedora / RHEL / CentOS (DNF)
@@ -33,7 +33,7 @@ sudo dpkg -i ooclock_0.1.0-1_amd64.deb
 curl -fsSL https://openooda-tools.github.io/ooclock/install.sh | bash -s -- --dnf
 
 # Or manual RPM install
-sudo dnf install ./ooclock-0.1.0-1.fc44.x86_64.rpm
+sudo dnf install ./ooclock-0.2.0-1.fc44.x86_64.rpm
 ```
 
 ### Arch Linux (PKGBUILD)

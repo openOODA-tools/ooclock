@@ -131,3 +131,36 @@ pub fn json_escape(s: String) -> String {
     }
     return out;
 }
+
+pub fn parse_int_safe(s: String, default_val: Int) -> Int {
+    let mut trimmed: String = str_trim(s);
+    if trimmed == "" { return default_val; }
+    let mut n: Int = chars_len(trimmed);
+    if n >= 2 && str_starts_with(trimmed, "\"") && str_ends_with(trimmed, "\"") {
+        trimmed = str_slice(trimmed, 1, n - 1);
+        n = chars_len(trimmed);
+    }
+    if trimmed == "" { return default_val; }
+    let mut is_neg: Bool = false;
+    let mut start: Int = 0;
+    if char_at(trimmed, 0) == "-" {
+        is_neg = true;
+        start = 1;
+        if n == 1 { return default_val; }
+    } else if char_at(trimmed, 0) == "+" {
+        start = 1;
+        if n == 1 { return default_val; }
+    }
+    let mut val: Int = 0;
+    let mut i: Int = start;
+    while i < n {
+        let b: Int = byte_at(char_at(trimmed, i), 0);
+        if b >= 48 && b <= 57 {
+            val = val * 10 + (b - 48);
+        } else {
+            return if is_neg { 0 - val } else { val };
+        }
+        i = i + 1;
+    }
+    return if is_neg { 0 - val } else { val };
+}
